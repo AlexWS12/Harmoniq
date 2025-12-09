@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmoniq - Voice & AI Music Composer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 1.3em;
+            color: #764ba2;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        #musicStaff {
+            width: 100%;
+            height: 200px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            cursor: crosshair;
+            background: #fffef8;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        input, select {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        
+        .piano-keys {
+            display: flex;
+            gap: 2px;
+            margin: 15px 0;
+            overflow-x: auto;
+            padding: 10px;
+            background: #222;
+            border-radius: 8px;
+        }
+        
+        .key {
+            min-width: 40px;
+            height: 120px;
+            background: white;
+            border: 1px solid #333;
+            border-radius: 0 0 4px 4px;
+            cursor: pointer;
+            transition: background 0.1s;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .key:hover {
+            background: #e0e0e0;
+        }
+        
+        .key:active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .black-key {
+            background: #333;
+            color: #999;
+            height: 80px;
+            margin: 0 -12px;
+            z-index: 1;
+            min-width: 24px;
+        }
+        
+        .black-key:hover {
+            background: #555;
+        }
+        
+        #recordingIndicator {
+            display: none;
+            color: #dc3545;
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        audio {
+            width: 100%;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Harmoniq</h1>
+        <p class="subtitle">Hum a melody or click notes → AI completes your song!</p>
+        
+        <!-- Important Notice -->
+        <div class="status info" style="display: block; margin-bottom: 20px;">
+            <strong>🚀 Quick Start:</strong> 1) Enter your API key below 2) Record or click notes 3) Generate with AI<br>
+            <strong>💡 Tip:</strong> If you see "Failed to fetch", make sure you saved your API key first!
+        </div>
+        
+        <!-- API Setup -->
+        <div class="section">
+            <div class="section-title">🔑 API Setup</div>
+            <div class="input-group">
+                <select id="apiProvider">
+                    <option value="openai">OpenAI (GPT-4)</option>
+                    <option value="gemini">Google Gemini</option>
+                </select>
+                <input type="password" id="apiKey" placeholder="Enter your API key">
+                <button class="btn" onclick="setAPIKey()">Save Key</button>
+                <button class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
+            </div>
+            <div id="apiStatus" class="status" style="display:none;"></div>
+            <p style="margin-top: 10px; font-size: 13px; color: #666;">
+                <strong>⚠️ Important:</strong> OpenAI keys start with "sk-", Gemini keys start with "AIza"<br>
+                Get API keys: <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a> | 
+                <a href="https://aistudio.google.com/app/apikey" target="_blank">Google Gemini (Free)</a>
+            </p>
+        </div>
+        
+        <!-- Voice Input -->
+        <div class="section">
+            <div class="section-title">🎤 Voice Input</div>
+            <p style="margin-bottom: 15px; color: #666;">Record yourself humming or singing a melody</p>
+            <div class="controls">
+                <button class="btn" id="recordBtn" onclick="toggleRecording()">● Start Recording</button>
+                <button class="btn btn-secondary" onclick="analyzeAudio()" id="analyzeBtn" disabled>Analyze Recording</button>
+                <span id="recordingIndicator">● RECORDING...</span>
+            </div>
+            <audio id="audioPlayback" controls style="display:none;"></audio>
+            <div id="voiceStatus" class="status" style="display:none;"></div>
+        </div>
+        
+        <!-- Manual Note Input -->
+        <div class="section">
+            <div class="section-title">🎹 Click to Add Notes</div>
+            <canvas id="musicStaff"></canvas>
+            <div class="piano-keys" id="pianoKeys"></div>
+            <div class="controls">
+                <button class="btn btn-danger" onclick="clearNotes()">Clear All Notes</button>
+                <button class="btn btn-secondary" onclick="playNotes()">▶ Play Notes</button>
+            </div>
+        </div>
+        
+        <!-- AI Generation -->
+        <div class="section">
+            <div class="section-title">🤖 AI Music Generation</div>
+            <textarea id="prompt" placeholder="Describe what you want the AI to do... (e.g., 'Continue with a jazz feel', 'Make it more upbeat', 'Add a melancholic ending')">Continue the melody naturally and make it sound complete</textarea>
+            <div class="input-group" style="margin-top: 15px;">
+                <label>Measures to generate:</label>
+                <input type="number" id="measures" value="4" min="1" max="16" style="width: 100px;">
+                <button class="btn" onclick="generateMusic()" style="flex: 1;">✨ Generate with AI</button>
+            </div>
+            <div id="genStatus" class="status" style="display:none;"></div>
+        </div>
+        
+        <!-- Generated Music -->
+        <div class="section" id="generatedSection" style="display:none;">
+            <div class="section-title">🎶 Generated Music</div>
+            <canvas id="generatedStaff" width="1000" height="200"></canvas>
+            <div class="controls">
+                <button class="btn" onclick="playGenerated()">▶ Play Generated</button>
+                <button class="btn btn-secondary" onclick="downloadMIDI()">💾 Download MIDI</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global state
+        let notes = [];
+        let generatedNotes = [];
+        let mediaRecorder;
+        let audioChunks = [];
+        let audioContext;
+        let isRecording = false;
+        
+        // Initialize
+        window.onload = function() {
+            initMusicStaff();
+            initPianoKeys();
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        };
+        
+        // API Setup
+        function setAPIKey() {
+            const provider = document.getElementById('apiProvider').value;
+            const key = document.getElementById('apiKey').value;
+            
+            if (!key) {
+                showStatus('apiStatus', 'Please enter an API key', 'error');
+                return;
+            }
+            
+            fetch('/api/set_key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ provider, key })
+            })
+            .then(r => r.json())
+            .then(data => {
+                apiKeySet = true;
+                showStatus('apiStatus', '✓ API key saved successfully', 'success');
+                document.getElementById('apiKey').value = '';
+            })
+            .catch(err => {
+                showStatus('apiStatus', 'Error: ' + err, 'error');
+            });
+        }
+        
+        function testConnection() {
+            const provider = document.getElementById('apiProvider').value;
+            
+            showStatus('apiStatus', '🔄 Testing connection...', 'info');
+            
+            fetch('/api/test_ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ provider })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    let msg = '✓ ' + data.message;
+                    if (data.models) {
+                        msg += '<br>Available models: ' + data.models.join(', ');
+                    }
+                    showStatus('apiStatus', msg, 'success');
+                } else {
+                    showStatus('apiStatus', '❌ Connection failed: ' + data.error, 'error');
+                }
+            })
+            .catch(err => {
+                showStatus('apiStatus', '❌ Connection failed: ' + err, 'error');
+            });
+        }
+        
+        // Voice Recording
+        async function toggleRecording() {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+                    
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audioEl = document.getElementById('audioPlayback');
+                        audioEl.src = audioUrl;
+                        audioEl.style.display = 'block';
+                        document.getElementById('analyzeBtn').disabled = false;
+                    };
+                    
+                    mediaRecorder.start();
+                    isRecording = true;
+                    document.getElementById('recordBtn').textContent = '■ Stop Recording';
+                    document.getElementById('recordBtn').classList.add('btn-danger');
+                    document.getElementById('recordingIndicator').style.display = 'inline';
+                    showStatus('voiceStatus', 'Recording... hum or sing your melody!', 'info');
+                } catch (err) {
+                    showStatus('voiceStatus', 'Error accessing microphone: ' + err, 'error');
+                }
+            } else {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                document.getElementById('recordBtn').textContent = '● Start Recording';
+                document.getElementById('recordBtn').classList.remove('btn-danger');
+                document.getElementById('recordingIndicator').style.display = 'none';
+                showStatus('voiceStatus', 'Recording saved. Click "Analyze Recording" to convert to notes.', 'success');
+            }
+        }
+        
+        function analyzeAudio() {
+            const audioEl = document.getElementById('audioPlayback');
+            if (!audioEl.src) return;
+            
+            showStatus('voiceStatus', 'Analyzing audio... detecting pitches...', 'info');
+            
+            // Get audio data as base64
+            fetch(audioEl.src)
+                .then(r => r.blob())
+                .then(blob => {
+                    const reader = new FileReader();
+                    reader.onloadend = function() {
+                        fetch('/api/analyze_audio', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ audio: reader.result })
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                notes = data.notes;
+                                drawStaff();
+                                showStatus('voiceStatus', `✓ Detected ${notes.length} notes!`, 'success');
+                            } else {
+                                showStatus('voiceStatus', 'Error: ' + data.error, 'error');
+                            }
+                        })
+                        .catch(err => {
+                            showStatus('voiceStatus', 'Error analyzing: ' + err, 'error');
+                        });
+                    };
+                    reader.readAsDataURL(blob);
+                });
+        }
+        
+        // Music Staff
+        function initMusicStaff() {
+            const canvas = document.getElementById('musicStaff');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 200;
+            
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                addNoteAtPosition(x, y);
+            });
+            
+            drawStaff();
+        }
+        
+        function drawStaff() {
+            const canvas = document.getElementById('musicStaff');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw staff lines
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 5; i++) {
+                const y = 50 + i * 15;
+                ctx.beginPath();
+                ctx.moveTo(20, y);
+                ctx.lineTo(canvas.width - 20, y);
+                ctx.stroke();
+            }
+            
+            // Draw treble clef (simplified)
+            ctx.font = '48px serif';
+            ctx.fillText('𝄞', 25, 85);
+            
+            // Draw notes
+            notes.forEach((note, index) => {
+                const x = 100 + index * 50;
+                const y = midiToStaffY(note.midi);
+                
+                // Note head
+                ctx.fillStyle = '#667eea';
+                ctx.beginPath();
+                ctx.ellipse(x, y, 6, 5, -0.3, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Stem
+                ctx.strokeStyle = '#667eea';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x + 6, y);
+                ctx.lineTo(x + 6, y - 30);
+                ctx.stroke();
+                
+                // Note name
+                ctx.fillStyle = '#666';
+                ctx.font = '10px sans-serif';
+                ctx.fillText(note.note, x - 8, y + 25);
+            });
+        }
+        
+        function midiToStaffY(midi) {
+            // C4 = 60, map to staff
+            const offset = (72 - midi) * 3.75;  // E5 = 72 = top line
+            return 50 + offset;
+        }
+        
+        function addNoteAtPosition(x, y) {
+            // Convert Y position to MIDI note
+            const midi = Math.round(72 - (y - 50) / 3.75);
+            const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const octave = Math.floor(midi / 12) - 1;
+            const noteName = noteNames[midi % 12] + octave;
+            
+            notes.push({
+                note: noteName,
+                midi: midi,
+                duration: 1.0,
+                start: notes.length * 1.0
+            });
+            
+            drawStaff();
+        }
+        
+        function clearNotes() {
+            notes = [];
+            drawStaff();
+        }
+        
+        // Piano Keys
+        function initPianoKeys() {
+            const container = document.getElementById('pianoKeys');
+            const whiteKeys = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5'];
+            const blackKeys = ['C#4', 'D#4', 'F#4', 'G#4', 'A#4', 'C#5', 'D#5', 'F#5', 'G#5', 'A#5'];
+            
+            whiteKeys.forEach(note => {
+                const key = document.createElement('div');
+                key.className = 'key';
+                key.textContent = note;
+                key.onclick = () => addNote(note);
+                container.appendChild(key);
+            });
+        }
+        
+        function addNote(noteName) {
+            const midiMap = {'C':60, 'C#':61, 'D':62, 'D#':63, 'E':64, 'F':65, 'F#':66, 'G':67, 'G#':68, 'A':69, 'A#':70, 'B':71};
+            const note = noteName.slice(0, -1);
+            const octave = parseInt(noteName.slice(-1));
+            const midi = midiMap[note] + (octave - 4) * 12;
+            
+            notes.push({
+                note: noteName,
+                midi: midi,
+                duration: 1.0,
+                start: notes.length * 1.0
+            });
+            
+            drawStaff();
+            playTone(midi, 0.3);
+        }
+        
+        // Audio Playback
+        function playTone(midi, duration) {
+            const freq = 440 * Math.pow(2, (midi - 69) / 12);
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            osc.start();
+            osc.stop(audioContext.currentTime + duration);
+        }
+        
+        function playNotes() {
+            notes.forEach((note, i) => {
+                setTimeout(() => playTone(note.midi, 0.5), i * 500);
+            });
+        }
+        
+        // AI Generation
+        function generateMusic() {
+            if (!apiKeySet) {
+                showStatus('genStatus', '⚠️ Please enter and save your API key first (see 🔑 API Setup section above)', 'error');
+                return;
+            }
+            
+            if (notes.length === 0) {
+                showStatus('genStatus', 'Please add some notes first (hum a melody or click on the staff)', 'error');
+                return;
+            }
+            
+            const prompt = document.getElementById('prompt').value;
+            const measures = parseInt(document.getElementById('measures').value);
+            const provider = document.getElementById('apiProvider').value;
+            
+            showStatus('genStatus', '🤖 AI is composing... this may take a few seconds...', 'info');
+            
+            fetch('/api/generate_music', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    notes: notes,
+                    prompt: prompt,
+                    provider: provider,
+                    measures: measures
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    generatedNotes = data.notes;
+                    document.getElementById('generatedSection').style.display = 'block';
+                    drawGeneratedStaff();
+                    showStatus('genStatus', `✓ Generated ${generatedNotes.length} notes!`, 'success');
+                } else {
+                    showStatus('genStatus', 'Error: ' + data.error, 'error');
+                }
+            })
+            .catch(err => {
+                showStatus('genStatus', 'Error: ' + err, 'error');
+            });
+        }
+        
+        function drawGeneratedStaff() {
+            const canvas = document.getElementById('generatedStaff');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw staff lines
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 5; i++) {
+                const y = 50 + i * 15;
+                ctx.beginPath();
+                ctx.moveTo(20, y);
+                ctx.lineTo(canvas.width - 20, y);
+                ctx.stroke();
+            }
+            
+            // Draw notes
+            generatedNotes.forEach((note, index) => {
+                const x = 100 + index * 40;
+                const y = midiToStaffY(note.midi);
+                
+                ctx.fillStyle = '#764ba2';
+                ctx.beginPath();
+                ctx.ellipse(x, y, 6, 5, -0.3, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.strokeStyle = '#764ba2';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x + 6, y);
+                ctx.lineTo(x + 6, y - 30);
+                ctx.stroke();
+            });
+        }
+        
+        function playGenerated() {
+            generatedNotes.forEach((note, i) => {
+                setTimeout(() => playTone(note.midi, 0.5), i * 500);
+            });
+        }
+        
+        function downloadMIDI() {
+            alert('MIDI export coming soon!');
+        }
+        
+        // Utility
+        function showStatus(id, message, type) {
+            const el = document.getElementById(id);
+            el.innerHTML = message;
+            el.className = 'status ' + type;
+            el.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
